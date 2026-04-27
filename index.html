@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FEEDBACK FREE & VIP</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
+
+body{
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:linear-gradient(135deg,#020617,#0f172a);
+  color:white;
+}
+
+/* FORM */
+.container{
+  width:340px;
+  padding:25px;
+  border-radius:20px;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(15px);
+  box-shadow:0 0 40px #00eaff33;
+}
+
+h1{
+  text-align:center;
+  font-size:18px;
+  color:#00eaff;
+  margin-bottom:15px;
+}
+
+input, textarea{
+  width:100%;
+  margin-top:10px;
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  background:#020617;
+  color:white;
+}
+
+button{
+  width:100%;
+  margin-top:15px;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  background:#00eaff;
+  color:black;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+button.loading{
+  opacity:0.6;
+  pointer-events:none;
+}
+
+#preview{
+  width:100%;
+  margin-top:10px;
+  border-radius:10px;
+  display:none;
+}
+
+/* OVERLAY */
+.overlay{
+  position:fixed;
+  inset:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:rgba(2,6,23,0.7);
+  backdrop-filter:blur(12px);
+  opacity:0;
+  pointer-events:none;
+  transition:0.3s;
+}
+
+.overlay.show{
+  opacity:1;
+  pointer-events:auto;
+}
+
+.card{
+  width:300px;
+  padding:25px;
+  border-radius:20px;
+  text-align:center;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.2);
+  transform:scale(0.8);
+  transition:0.3s;
+}
+
+.overlay.show .card{
+  transform:scale(1);
+}
+
+.icon{
+  font-size:40px;
+  margin-bottom:10px;
+}
+
+.title{
+  font-size:18px;
+  font-weight:bold;
+}
+
+.desc{
+  font-size:13px;
+  opacity:0.8;
+  margin-bottom:10px;
+}
+
+/* warna */
+.success{color:#22c55e;}
+.wait{color:#facc15;}
+.error{color:#ef4444;}
+
+.progressWrap{
+  width:100%;
+  height:6px;
+  background:#1f2937;
+  border-radius:10px;
+  overflow:hidden;
+  margin-top:10px;
+  display:none;
+}
+
+.progressBar{
+  height:100%;
+  width:100%;
+  background:#facc15;
+  transition:width linear;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>⚡ FEEDBACK FREE & VIP ⚡</h1>
+
+  <input type="file" id="imageInput" accept="image/*">
+  <img id="preview">
+
+  <textarea id="message" placeholder="Tulis feedback..."></textarea>
+
+  <button id="btn" onclick="sendTelegram()">Kirim Feedback</button>
+</div>
+
+<!-- OVERLAY -->
+<div id="overlay" class="overlay">
+  <div class="card">
+    <div id="icon" class="icon">✔️</div>
+    <div id="title" class="title">Berhasil</div>
+    <div id="desc" class="desc"></div>
+
+    <div class="progressWrap" id="progressWrap">
+      <div class="progressBar" id="progressBar"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOKEN = "8603918241:AAGFRKm-E5JH6eRRvT6iFx4UYvDzqNTiDuE";
+const CHAT_ID = "-1003866320352";
+
+const preview = document.getElementById("preview");
+const imageInput = document.getElementById("imageInput");
+const btn = document.getElementById("btn");
+
+// preview
+imageInput.onchange = () => {
+  const file = imageInput.files[0];
+  if(file){
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
+  }
+};
+
+// overlay function
+function showOverlay(type, text){
+  const overlay = document.getElementById("overlay");
+  const icon = document.getElementById("icon");
+  const title = document.getElementById("title");
+  const desc = document.getElementById("desc");
+  const progressWrap = document.getElementById("progressWrap");
+  const progressBar = document.getElementById("progressBar");
+
+  icon.className = "icon " + type;
+  title.className = "title " + type;
+
+  progressWrap.style.display = "none";
+  progressBar.style.width = "100%";
+
+  if(type==="success"){
+    icon.innerHTML="✔️";
+    title.innerText="Berhasil";
+  } else if(type==="wait"){
+    icon.innerHTML="⏳";
+    title.innerText="Tunggu";
+    progressWrap.style.display="block";
+
+    let duration = 3600; // detik
+    let width = 100;
+
+    let interval = setInterval(()=>{
+      width -= (100/duration);
+      progressBar.style.width = width + "%";
+      if(width<=0) clearInterval(interval);
+    },1000);
+
+  } else {
+    icon.innerHTML="❌";
+    title.innerText="Gagal";
+  }
+
+  desc.innerText = text;
+
+  overlay.classList.add("show");
+
+  setTimeout(()=>{
+    overlay.classList.remove("show");
+  },3000);
+}
+
+// anti spam
+function canSend(){
+  const last = localStorage.getItem("lastSend");
+  if(!last) return true;
+
+  const diff = Date.now() - parseInt(last);
+  return diff > 3600000;
+}
+
+async function sendTelegram(){
+  const message = document.getElementById("message").value;
+  const file = imageInput.files[0];
+
+  if(!file && !message){
+    showOverlay("error","Isi pesan atau upload foto!");
+    return;
+  }
+
+  if(!canSend()){
+    showOverlay("wait","Kamu harus menunggu 1 jam!");
+    return;
+  }
+
+  btn.classList.add("loading");
+  btn.innerText="Mengirim...";
+
+  try{
+    let res;
+
+    if(file){
+      let formData = new FormData();
+      formData.append("chat_id", CHAT_ID);
+      formData.append("photo", file);
+      formData.append("caption","📩 FEEDBACK FREE & VIP\n\n"+message);
+
+      res = await fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`,{
+        method:"POST",
+        body:formData
+      });
+
+    } else {
+      res = await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          chat_id:CHAT_ID,
+          text:"📩 FEEDBACK FREE & VIP\n\n"+message
+        })
+      });
+    }
+
+    const result = await res.json();
+
+    if(!result.ok){
+      showOverlay("error","Gagal kirim!");
+    } else {
+      localStorage.setItem("lastSend",Date.now());
+      showOverlay("success","Feedback berhasil dikirim!");
+
+      document.getElementById("message").value="";
+      imageInput.value="";
+      preview.style.display="none";
+    }
+
+  } catch(e){
+    showOverlay("error","Koneksi error!");
+  }
+
+  btn.classList.remove("loading");
+  btn.innerText="Kirim Feedback";
+}
+</script>
+
+</body>
+</html>
