@@ -1,308 +1,155 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FEEDBACK FREE & VIP</title>
-
-<style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
-
-body{
-  height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  background:linear-gradient(135deg,#020617,#0f172a);
-  color:white;
-}
-
-/* FORM */
-.container{
-  width:340px;
-  padding:25px;
-  border-radius:20px;
-  background:rgba(255,255,255,0.05);
-  backdrop-filter:blur(15px);
-  box-shadow:0 0 40px #00eaff33;
-}
-
-h1{
-  text-align:center;
-  font-size:18px;
-  color:#00eaff;
-  margin-bottom:15px;
-}
-
-input, textarea{
-  width:100%;
-  margin-top:10px;
-  padding:10px;
-  border:none;
-  border-radius:10px;
-  background:#020617;
-  color:white;
-}
-
-button{
-  width:100%;
-  margin-top:15px;
-  padding:12px;
-  border:none;
-  border-radius:10px;
-  background:#00eaff;
-  color:black;
-  font-weight:bold;
-  cursor:pointer;
-}
-
-button.loading{
-  opacity:0.6;
-  pointer-events:none;
-}
-
-#preview{
-  width:100%;
-  margin-top:10px;
-  border-radius:10px;
-  display:none;
-}
-
-/* OVERLAY */
-.overlay{
-  position:fixed;
-  inset:0;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  background:rgba(2,6,23,0.7);
-  backdrop-filter:blur(12px);
-  opacity:0;
-  pointer-events:none;
-  transition:0.3s;
-}
-
-.overlay.show{
-  opacity:1;
-  pointer-events:auto;
-}
-
-.card{
-  width:300px;
-  padding:25px;
-  border-radius:20px;
-  text-align:center;
-  background:rgba(255,255,255,0.06);
-  border:1px solid rgba(255,255,255,0.2);
-  transform:scale(0.8);
-  transition:0.3s;
-}
-
-.overlay.show .card{
-  transform:scale(1);
-}
-
-.icon{
-  font-size:40px;
-  margin-bottom:10px;
-}
-
-.title{
-  font-size:18px;
-  font-weight:bold;
-}
-
-.desc{
-  font-size:13px;
-  opacity:0.8;
-  margin-bottom:10px;
-}
-
-/* warna */
-.success{color:#22c55e;}
-.wait{color:#facc15;}
-.error{color:#ef4444;}
-
-.progressWrap{
-  width:100%;
-  height:6px;
-  background:#1f2937;
-  border-radius:10px;
-  overflow:hidden;
-  margin-top:10px;
-  display:none;
-}
-
-.progressBar{
-  height:100%;
-  width:100%;
-  background:#facc15;
-  transition:width linear;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus // Feedback Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;400;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #050505; color: #fff; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .input-style { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); }
+        .input-style:focus { border-color: #06b6d4; outline: none; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .animate-slide { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .loader-hide { animation: fadeOut 0.8s forwards; }
+        @keyframes fadeOut { to { opacity: 0; visibility: hidden; } }
+        #toast { transition: all 0.5s ease; }
+    </style>
 </head>
-
 <body>
 
-<div class="container">
-  <h1>⚡ FEEDBACK FREE & VIP ⚡</h1>
-
-  <input type="file" id="imageInput" accept="image/*">
-  <img id="preview">
-
-  <textarea id="message" placeholder="Tulis feedback..."></textarea>
-
-  <button id="btn" onclick="sendTelegram()">Kirim Feedback</button>
-</div>
-
-<!-- OVERLAY -->
-<div id="overlay" class="overlay">
-  <div class="card">
-    <div id="icon" class="icon">✔️</div>
-    <div id="title" class="title">Berhasil</div>
-    <div id="desc" class="desc"></div>
-
-    <div class="progressWrap" id="progressWrap">
-      <div class="progressBar" id="progressBar"></div>
+    <!-- Loading Screen -->
+    <div id="loader" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#050505]">
+        <div class="space-y-4 text-center">
+            <div class="w-12 h-1 bg-cyan-500 animate-pulse mx-auto"></div>
+            <p class="text-[10px] tracking-[0.4em] uppercase text-cyan-500">Initializing Nexus...</p>
+        </div>
     </div>
-  </div>
-</div>
 
-<script>
-const TOKEN = "8603918241:AAGFRKm-E5JH6eRRvT6iFx4UYvDzqNTiDuE";
-const CHAT_ID = "-1003866320352";
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-10 right-10 z-[110] bg-cyan-500 text-black px-6 py-3 rounded-full font-bold opacity-0 translate-x-10 pointer-events-none">
+        ✓ Feedback Terkirim!
+    </div>
 
-const preview = document.getElementById("preview");
-const imageInput = document.getElementById("imageInput");
-const btn = document.getElementById("btn");
+    <!-- Main Content -->
+    <main class="max-w-xl mx-auto p-6 min-h-screen flex flex-col justify-center">
+        <h1 class="text-4xl font-extrabold tracking-tighter mb-10">Nexus Feedback<span class="text-cyan-500">.</span></h1>
+        <section class="glass p-8 rounded-[2rem]">
+            <form id="feedbackForm" class="space-y-5">
+                <input type="text" id="userName" required placeholder="Display Name" class="w-full p-4 rounded-2xl input-style text-sm">
+                <textarea id="userMsg" required placeholder="Your message..." class="w-full p-4 rounded-2xl input-style text-sm h-32 resize-none"></textarea>
+                <div class="flex items-center gap-4">
+                    <input type="file" id="userImg" accept="image/*" class="hidden">
+                    <label for="userImg" class="cursor-pointer text-[10px] uppercase border border-white/10 px-4 py-2 rounded-xl hover:bg-white/5">Attach Media</label>
+                    <button type="submit" class="flex-grow bg-white text-black py-4 rounded-2xl font-bold text-sm hover:bg-cyan-400 transition-all">POST FEEDBACK</button>
+                </div>
+            </form>
+        </section>
+        <div class="mt-8 flex justify-between text-[10px] uppercase text-slate-600">
+            <button onclick="toggleModal('modal', true)">View Archive</button>
+            <button onclick="toggleModal('adminModal', true)">Admin Access</button>
+        </div>
+    </main>
 
-// preview
-imageInput.onchange = () => {
-  const file = imageInput.files[0];
-  if(file){
-    preview.src = URL.createObjectURL(file);
-    preview.style.display = "block";
-  }
-};
+    <!-- Modal Archive -->
+    <div id="modal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div onclick="toggleModal('modal', false)" class="absolute inset-0 bg-black/60 backdrop-blur-md"></div>
+        <div class="relative w-full sm:max-w-lg bg-[#111111] border border-white/10 rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 animate-slide">
+            <h2 class="text-2xl font-bold mb-8">Arsip Feedback</h2>
+            <div id="allFeedbackList" class="max-h-[60vh] overflow-y-auto space-y-6 pr-2"></div>
+        </div>
+    </div>
 
-// overlay function
-function showOverlay(type, text){
-  const overlay = document.getElementById("overlay");
-  const icon = document.getElementById("icon");
-  const title = document.getElementById("title");
-  const desc = document.getElementById("desc");
-  const progressWrap = document.getElementById("progressWrap");
-  const progressBar = document.getElementById("progressBar");
+    <!-- Admin Modal -->
+    <div id="adminModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+        <div class="glass w-full max-w-xs p-8 rounded-[2rem] animate-slide">
+            <h2 class="text-xl font-bold mb-6">Admin Auth.</h2>
+            <input type="text" id="adminUser" placeholder="Username" class="w-full p-3 rounded-xl input-style text-sm mb-4">
+            <input type="password" id="adminKey" placeholder="Access Key" class="w-full p-3 rounded-xl input-style text-sm mb-4">
+            <button onclick="verifyAdmin()" class="w-full bg-cyan-600 py-3 rounded-xl font-bold text-sm">LOGIN</button>
+        </div>
+    </div>
 
-  icon.className = "icon " + type;
-  title.className = "title " + type;
+    <script>
+        let isAdmin = false;
+        
+        // Hide loader after 1.5s
+        window.onload = () => setTimeout(() => document.getElementById('loader').classList.add('loader-hide'), 1500);
 
-  progressWrap.style.display = "none";
-  progressBar.style.width = "100%";
+        function showToast() {
+            const t = document.getElementById('toast');
+            t.style.opacity = '1'; t.style.transform = 'translateX(0)';
+            setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(20px)'; }, 3000);
+        }
 
-  if(type==="success"){
-    icon.innerHTML="✔️";
-    title.innerText="Berhasil";
-  } else if(type==="wait"){
-    icon.innerHTML="⏳";
-    title.innerText="Tunggu";
-    progressWrap.style.display="block";
+        function render(name, msg, img, id) {
+            const container = document.getElementById('allFeedbackList');
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'border-l-2 border-white/10 pl-4 py-1';
+            div.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <p class="font-bold text-cyan-500 text-xs">@${name}</p>
+                    ${isAdmin ? `<button onclick="deleteItem('${id}')" class="text-[9px] text-red-500 hover:underline">DELETE</button>` : ''}
+                </div>
+                <p class="text-slate-300 text-sm mt-2">${msg}</p>
+                ${img ? `<img src="${img}" class="mt-3 rounded-xl max-h-40 border border-white/10">` : ''}
+            `;
+            container.prepend(div);
+        }
 
-    let duration = 3600; // detik
-    let width = 100;
+        document.getElementById('feedbackForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('userName').value;
+            const msg = document.getElementById('userMsg').value;
+            const file = document.getElementById('userImg').files[0];
+            const reader = new FileReader();
 
-    let interval = setInterval(()=>{
-      width -= (100/duration);
-      progressBar.style.width = width + "%";
-      if(width<=0) clearInterval(interval);
-    },1000);
+            if(file) {
+                reader.onload = (event) => {
+                    saveAndRender(name, msg, event.target.result);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                saveAndRender(name, msg, null);
+            }
+        });
 
-  } else {
-    icon.innerHTML="❌";
-    title.innerText="Gagal";
-  }
+        function saveAndRender(name, msg, img) {
+            const data = { id: Date.now(), name, msg, img };
+            const storage = JSON.parse(localStorage.getItem('nexus') || '[]');
+            storage.push(data);
+            localStorage.setItem('nexus', JSON.stringify(storage));
+            render(data.name, data.msg, data.img, data.id);
+            showToast();
+            document.getElementById('feedbackForm').reset();
+        }
 
-  desc.innerText = text;
+        function verifyAdmin() {
+            if(document.getElementById('adminUser').value === "admin" && document.getElementById('adminKey').value === "12345") {
+                isAdmin = true; 
+                toggleModal('adminModal', false); 
+                refreshList();
+            } else { alert("Wrong Credentials"); }
+        }
 
-  overlay.classList.add("show");
+        function deleteItem(id) {
+            document.getElementById(id).remove();
+            let data = JSON.parse(localStorage.getItem('nexus') || '[]');
+            data = data.filter(item => item.id != id);
+            localStorage.setItem('nexus', JSON.stringify(data));
+        }
 
-  setTimeout(()=>{
-    overlay.classList.remove("show");
-  },3000);
-}
+        function refreshList() {
+            document.getElementById('allFeedbackList').innerHTML = "";
+            const saved = JSON.parse(localStorage.getItem('nexus') || '[]');
+            saved.forEach(d => render(d.name, d.msg, d.img, d.id));
+        }
 
-// anti spam
-function canSend(){
-  const last = localStorage.getItem("lastSend");
-  if(!last) return true;
-
-  const diff = Date.now() - parseInt(last);
-  return diff > 3600000;
-}
-
-async function sendTelegram(){
-  const message = document.getElementById("message").value;
-  const file = imageInput.files[0];
-
-  if(!file && !message){
-    showOverlay("error","Isi pesan atau upload foto!");
-    return;
-  }
-
-  if(!canSend()){
-    showOverlay("wait","Kamu harus menunggu 1 jam!");
-    return;
-  }
-
-  btn.classList.add("loading");
-  btn.innerText="Mengirim...";
-
-  try{
-    let res;
-
-    if(file){
-      let formData = new FormData();
-      formData.append("chat_id", CHAT_ID);
-      formData.append("photo", file);
-      formData.append("caption","📩 FEEDBACK FREE & VIP\n\n"+message);
-
-      res = await fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`,{
-        method:"POST",
-        body:formData
-      });
-
-    } else {
-      res = await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`,{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          chat_id:CHAT_ID,
-          text:"📩 FEEDBACK FREE & VIP\n\n"+message
-        })
-      });
-    }
-
-    const result = await res.json();
-
-    if(!result.ok){
-      showOverlay("error","Gagal kirim!");
-    } else {
-      localStorage.setItem("lastSend",Date.now());
-      showOverlay("success","Feedback berhasil dikirim!");
-
-      document.getElementById("message").value="";
-      imageInput.value="";
-      preview.style.display="none";
-    }
-
-  } catch(e){
-    showOverlay("error","Koneksi error!");
-  }
-
-  btn.classList.remove("loading");
-  btn.innerText="Kirim Feedback";
-}
-</script>
-
+        function toggleModal(id, show) { document.getElementById(id).classList.toggle('hidden', !show); }
+        refreshList();
+    </script>
 </body>
 </html>
